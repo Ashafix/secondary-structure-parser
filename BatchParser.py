@@ -1,4 +1,4 @@
-    import sys
+import sys
 import os
 import collections
 import numpy as np
@@ -46,7 +46,9 @@ class BatchParser:
                 'min': min(v),
                 'stdev': np.std(v)
             }
+
         self.statistics['total number of results'] = len(self.results)
+        self.statistics['summary'] = dict(self.statistics['summary'])
         self.statistics['predictions'] = collections.defaultdict(float)
         total_len = 0
         for res in self.results.values():
@@ -57,7 +59,7 @@ class BatchParser:
         for k in self.statistics['predictions']:
             self.statistics['predictions'][k] /= total_len
 
-        return self.statistics
+        return dict(self.statistics)
 
 
 if __name__ == '__main__':
@@ -66,5 +68,8 @@ if __name__ == '__main__':
     else:
         if len(sys.argv) > 2:
             suffixes = sys.argv[2]
+        else:
+            suffixes = ('.ss3', )
         b = BatchParser(sys.argv[1], suffixes=suffixes)
         s = b.calculate_statistics()
+        print(s)

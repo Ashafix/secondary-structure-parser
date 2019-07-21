@@ -30,7 +30,6 @@ class SecondaryStructureParser:
     def _set_valid_prediction(self):
         if self.file_format == 'DeepConCNF_SS3':
             self.valid_predictions = ('C', 'H', 'E')
-        # TODO
         elif self.file_format == 'DeepConCNF_SS8':
             self.valid_predictions = ('C', 'H', 'E', 'L', 'T', 'S', 'G', 'B')
 
