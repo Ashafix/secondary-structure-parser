@@ -25,20 +25,23 @@ class SecondaryStructureParser:
             return 'DeepConCNF_SS3'
         if txt.startswith('#DeepConCNF_SS8'):
             return 'DeepConCNF_SS8'
+        raise ValueError('cannot guess type for file {}'.format(self.filename))
 
-    def _set_valid_prdiction(self):
+    def _set_valid_prediction(self):
         if self.file_format == 'DeepConCNF_SS3':
             self.valid_predictions = ('C', 'H', 'E')
         # TODO
         elif self.file_format == 'DeepConCNF_SS8':
-            self.valid_predictions = ('C', 'H', 'E', 'L', 'T', 'S')
+            self.valid_predictions = ('C', 'H', 'E', 'L', 'T', 'S', 'G', 'B')
 
     def parse(self, lines=None):
         if lines is None:
             with open(self.filename, 'r') as f:
                 lines = f.readlines()
+        if len(lines) < 4:
+            raise RuntimeError('File {} seems to be broken, it has less than 4 lines'.format(self.filename))
         self.file_format = self.guess_format(lines[0])
-        self._set_valid_prdiction()
+        self._set_valid_prediction()
         self._parser = getattr(self, '_parser_{}'.format(self.file_format))
 
         self.parsed = collections.OrderedDict()
@@ -63,12 +66,24 @@ class SecondaryStructureParser:
         # make sure the probabilities sum to 1
         for k, v in self.parsed.items():
             s = sum(v['probabilities'])
-            assert 0.998 <= s <= 1.002, 'invalid sum of probabilities {} for residue {}'.format(s, k)
+            assert 0.997 <= s <= 1.004, 'invalid sum of probabilities {} for residue {}'.format(s, k)
 
         # make sure the predictions are within the valid values
         for k, v in self.parsed.items():
             pred = v['prediction']
             assert pred in self.valid_predictions, 'invalid prediction "{}" for residue {}'.format(pred, k)
+
+    def calculate_statistics(self):
+
+        rel_occurence = collections.defaultdict(int)
+        for v in self.parsed.values():
+            rel_occurence[v['prediction']] += 1
+
+        total_len = len(self.parsed)
+        for k in self.valid_predictions:
+            rel_occurence[k] /= total_len
+
+        return dict(rel_occurence)
 
     def _parser(self):
         pass
@@ -92,3 +107,4 @@ class SecondaryStructureParser:
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         p = SecondaryStructureParser(sys.argv[1])
+        print(p.calculate_statistics())
