@@ -2,7 +2,9 @@ import sys
 import os
 import collections
 import numpy as np
+import pandas as pd
 from SecondaryStructureParser import SecondaryStructureParser
+from SecondaryStructureParser import to_df
 
 
 class BatchParser:
@@ -60,6 +62,14 @@ class BatchParser:
             self.statistics['predictions'][k] /= total_len
 
         return dict(self.statistics)
+
+    def to_df(self):
+        df_all = []
+        for filename, result in self.results.items():
+            df = to_df(result)
+            df.insert(0, 'filename', pd.Series([filename] * len(df)))
+            df_all.append(df)
+        return pd.concat(df_all)
 
 
 if __name__ == '__main__':

@@ -1,6 +1,7 @@
 import sys
 import os
 import collections
+import pandas as pd
 
 
 class SecondaryStructureParser:
@@ -84,6 +85,9 @@ class SecondaryStructureParser:
 
         return dict(rel_occurence)
 
+    def to_df(self):
+        return to_df(self.parsed)
+
     def _parser(self):
         pass
 
@@ -103,7 +107,15 @@ class SecondaryStructureParser:
         return {'id': aa_id, 'aa': aa, 'prediction': pred, 'probabilities': probs}
 
 
+def to_df(parsed):
+    df = pd.DataFrame.from_dict(parsed, orient='index', columns=['aa', 'prediction', 'probabilities'])
+    for i in range(len(df.head(1)['probabilities'].values[0])):
+        df['probabilities_{}'.format(i)] = df['probabilities'].apply(lambda x: x[i])
+    df.drop('probabilities', axis=1, inplace=True)
+    return df
+
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         p = SecondaryStructureParser(sys.argv[1])
         print(p.calculate_statistics())
+
