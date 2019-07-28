@@ -26,12 +26,16 @@ class SecondaryStructureParser:
             return 'DeepConCNF_SS3'
         if txt.startswith('#DeepConCNF_SS8'):
             return 'DeepConCNF_SS8'
+        if txt == '#\tAA\tSS\tHelix\tSheet\tCoil\n':
+            return 'Porter3'
+        if txt == '#\tAA\tSS\tG\tH\tI\tE\tB\tC\tS\tT\n':
+            return 'Porter8'
         raise ValueError('cannot guess type for file {}'.format(self.filename))
 
     def _set_valid_prediction(self):
-        if self.file_format == 'DeepConCNF_SS3':
+        if self.file_format in ('DeepConCNF_SS3', 'Porter3'):
             self.valid_predictions = ('C', 'H', 'E')
-        elif self.file_format == 'DeepConCNF_SS8':
+        elif self.file_format in ('DeepConCNF_SS8', 'Porter8'):
             self.valid_predictions = ('C', 'H', 'E', 'L', 'T', 'S', 'G', 'B')
 
     def parse(self, lines=None):
@@ -46,14 +50,17 @@ class SecondaryStructureParser:
 
         self.parsed = collections.OrderedDict()
         if self.file_format.startswith('DeepConCNF'):
-            for line in lines[3:]:
-                if line.strip() == '':
-                    continue
-                resp = self._parser(line)
-                assert resp['id'] not in self.parsed
-                self.parsed[resp['id']] = {'aa': resp['aa'],
-                                           'prediction': resp['prediction'],
-                                           'probabilities': resp.get('probabilities', ())}
+            lines = lines[3:]
+        elif self.file_format.startswith('Porter'):
+            lines = lines[1:]
+        for line in lines:
+            if line.strip() == '':
+                continue
+            resp = self._parser(line)
+            assert resp['id'] not in self.parsed
+            self.parsed[resp['id']] = {'aa': resp['aa'],
+                                       'prediction': resp['prediction'],
+                                       'probabilities': resp.get('probabilities', ())}
         return self.parsed
 
     def validate(self):
@@ -106,6 +113,21 @@ class SecondaryStructureParser:
         probs = [float(prob[0 + n * 6:6 + n * 6]) for n in range(n_predictions)]
         return {'id': aa_id, 'aa': aa, 'prediction': pred, 'probabilities': probs}
 
+    def _parser_Porter(self, line, n_predictions):
+        cells = line.split('\t')
+        assert len(cells) == 3 + n_predictions
+        aa_id = int(cells[0])
+        aa = cells[1]
+        pred = cells[2]
+        probs = [float(cell) for cell in cells[3:]]
+        return {'id': aa_id, 'aa': aa, 'prediction': pred, 'probabilities': probs}
+
+    def _parser_Porter3(self, line):
+        return self._parser_Porter(line,3)
+
+    def _parser_Porter8(self, line):
+        return self._parser_Porter(line, 8)
+
 
 def to_df(parsed):
     df = pd.DataFrame.from_dict(parsed, orient='index', columns=['aa', 'prediction', 'probabilities'])
@@ -113,6 +135,7 @@ def to_df(parsed):
         df['probabilities_{}'.format(i)] = df['probabilities'].apply(lambda x: x[i])
     df.drop('probabilities', axis=1, inplace=True)
     return df
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
