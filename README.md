@@ -1,6 +1,8 @@
 # secondary-structure-parser
 Parser for ss3 and ss8 secondary structure predictions.
 Files are parsed and validated. Statistics like secondary-structure distribution are calculated on-demand.
+
+Supports output from DeepCNF and Porter/Brewery.
 ## Usage
 
 ### SecondaryStructureParser
