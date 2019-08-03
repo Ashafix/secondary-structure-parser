@@ -28,10 +28,6 @@ class BatchParser:
             self.statistics[file] = p.calculate_statistics()
 
     def calculate_statistics(self):
-        predictions = set()
-        for res in self.results.values():
-            for residue in res.values():
-                predictions.add(residue['prediction'])
 
         self.statistics['summary'] = collections.defaultdict(list)
         for k, v in self.statistics.items():
@@ -51,15 +47,25 @@ class BatchParser:
 
         self.statistics['total number of results'] = len(self.results)
         self.statistics['summary'] = dict(self.statistics['summary'])
-        self.statistics['predictions'] = collections.defaultdict(float)
+        self.statistics['predictions'] = collections.defaultdict(int)
+        self.statistics['disordered'] = 0
         total_len = 0
         for res in self.results.values():
             total_len += len(res.values())
             for residue in res.values():
-                self.statistics['predictions'][residue['prediction']] += 1
+                if 'prediction' in residue:
+                    self.statistics['predictions'][residue['prediction']] += 1
+                elif 'disordered' in residue:
+                    self.statistics['disordered'] += int(residue['disordered'])
 
         for k in self.statistics['predictions']:
             self.statistics['predictions'][k] /= total_len
+
+        self.statistics['disordered'] /= total_len
+        if len(self.statistics['predictions']) == 0:
+            del(self.statistics['predictions'])
+        else:
+            del(self.statistics['disordered'])
 
         return dict(self.statistics)
 

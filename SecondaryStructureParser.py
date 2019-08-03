@@ -10,6 +10,7 @@ class SecondaryStructureParser:
         self.filename = filename
         if not os.path.isfile(filename):
             self.filename = 'reading string directly'
+
             lines = filename
         else:
             self.filename = filename
@@ -30,6 +31,8 @@ class SecondaryStructureParser:
             return 'Porter3'
         if txt == '#\tAA\tSS\tG\tH\tI\tE\tB\tC\tS\tT\n':
             return 'Porter8'
+        if '----- DISOPRED version 3' in txt:
+            return 'Disopred3'
         raise ValueError('cannot guess type for file {}'.format(self.filename))
 
     def _set_valid_prediction(self):
@@ -53,14 +56,21 @@ class SecondaryStructureParser:
             lines = lines[3:]
         elif self.file_format.startswith('Porter'):
             lines = lines[1:]
+        elif self.file_format.startswith('Disopred'):
+            lines = lines[3:]
         for line in lines:
             if line.strip() == '':
                 continue
             resp = self._parser(line)
             assert resp['id'] not in self.parsed
-            self.parsed[resp['id']] = {'aa': resp['aa'],
-                                       'prediction': resp['prediction'],
-                                       'probabilities': resp.get('probabilities', ())}
+            self.parsed[resp['id']] = {'aa': resp['aa']}
+            if self.file_format.startswith('Disopred'):
+                self.parsed[resp['id']] = {'disordered': resp['disordered'],
+                                           'probability': resp['probability']}
+            else:
+                self.parsed[resp['id']] = {'prediction': resp['prediction'],
+                                           'probabilities': resp.get('probabilities', ())}
+
         return self.parsed
 
     def validate(self):
@@ -70,25 +80,39 @@ class SecondaryStructureParser:
         for i, id_ in enumerate(ids[:-1]):
             assert id_ + 1 in self.parsed, 'did not find residue ID: {}'.format(id_)
 
+        # checks for ss3 and ss8 output
         # make sure the probabilities sum to 1
-        for k, v in self.parsed.items():
-            s = sum(v['probabilities'])
-            assert 0.997 <= s <= 1.004, 'invalid sum of probabilities {} for residue {}'.format(s, k)
+        if next(iter(self.parsed.values())).get('probabilities') is not None:
+            for k, v in self.parsed.items():
+                s = sum(v['probabilities'])
+                assert 0.9969 <= s <= 1.004, 'invalid sum of probabilities {} for residue {}'.format(s, k)
 
-        # make sure the predictions are within the valid values
-        for k, v in self.parsed.items():
-            pred = v['prediction']
-            assert pred in self.valid_predictions, 'invalid prediction "{}" for residue {}'.format(pred, k)
+            # make sure the predictions are within the valid values
+            for k, v in self.parsed.items():
+                pred = v['prediction']
+                assert pred in self.valid_predictions, 'invalid prediction "{}" for residue {}'.format(pred, k)
+
+        # checks for disopred output
+        if next(iter(self.parsed.values())).get('disordered') is not None:
+            for k, v in self.parsed.items():
+                assert v['disordered'] in (True, False)
+                assert 0 <= v['probability'] <= 1, v['probability']
+                assert (v['probability'] > 0.5) == v['disordered'] or v['probability'] == 0.5, (self.filename, v['probability'], v['disordered'])
 
     def calculate_statistics(self):
-
         rel_occurence = collections.defaultdict(int)
-        for v in self.parsed.values():
-            rel_occurence[v['prediction']] += 1
-
         total_len = len(self.parsed)
-        for k in self.valid_predictions:
-            rel_occurence[k] /= total_len
+
+        if self.file_format == 'Disopred3':
+            for v in self.parsed.values():
+                rel_occurence['disordered'] += int(v['disordered'])
+            rel_occurence['disordered'] /= total_len
+        else:
+            for v in self.parsed.values():
+                rel_occurence[v['prediction']] += 1
+
+            for k in self.valid_predictions:
+                rel_occurence[k] /= total_len
 
         return dict(rel_occurence)
 
@@ -127,6 +151,13 @@ class SecondaryStructureParser:
 
     def _parser_Porter8(self, line):
         return self._parser_Porter(line, 8)
+
+    def _parser_Disopred3(self, line):
+        aa_id = int(line[0:5])
+        aa = line[6]
+        disordered = line[8] == '*'
+        probability = float(line[10:14])
+        return {'id': aa_id, 'aa': aa, 'disordered': disordered, 'probability': probability}
 
 
 def to_df(parsed):
