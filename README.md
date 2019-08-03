@@ -1,8 +1,8 @@
 # secondary-structure-parser
-Parser for ss3 and ss8 secondary structure predictions.
+Parser for ss3 and ss8 secondary structure and disordered predictions.
 Files are parsed and validated. Statistics like secondary-structure distribution are calculated on-demand.
 
-Supports output from DeepCNF and Porter/Brewery.
+Supports output from DeepCNF and Porter/Brewery (.ss3/.ss8) and output from Disopred (.diso).
 ## Usage
 
 ### SecondaryStructureParser
@@ -19,7 +19,7 @@ or
 
 `python SecondaryStructureParser example.ss3`
 
-Individual entries can be accesed via `parser.parsed[residueId]`
+Individual entries can be accessed via `parser.parsed[residueId]`
 ### BatchParser
 
 ```
@@ -41,5 +41,5 @@ or
  'examples/1pazA.ss3': {'E': 0.34959349593495936, 'H': 0.15447154471544716, 'C': 0.4959349593495935}}
  ```  
 
-Individual files can be accesed via `batch_parser.parsed[filename]`     
+Individual files can be accessed via `batch_parser.parsed[filename]`     
      
