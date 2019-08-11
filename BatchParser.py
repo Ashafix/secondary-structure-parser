@@ -73,7 +73,9 @@ class BatchParser:
         df_all = []
         for filename, result in self.results.items():
             df = to_df(result)
-            df.insert(0, 'filename', pd.Series([filename] * len(df)))
+            df['filename'] = filename
+            df = df.set_index([df.filename, df.index])
+            df = df.drop('filename', axis=1)
             df_all.append(df)
         return pd.concat(df_all)
 

@@ -161,10 +161,13 @@ class SecondaryStructureParser:
 
 
 def to_df(parsed):
-    df = pd.DataFrame.from_dict(parsed, orient='index', columns=['aa', 'prediction', 'probabilities'])
-    for i in range(len(df.head(1)['probabilities'].values[0])):
-        df['probabilities_{}'.format(i)] = df['probabilities'].apply(lambda x: x[i])
-    df.drop('probabilities', axis=1, inplace=True)
+
+    df = pd.DataFrame.from_dict(parsed, orient='index', columns=list(next(iter(parsed.values())).keys()))
+    if 'probabilities' in df.columns:
+        for i in range(len(df.head(1)['probabilities'].values[0])):
+            df['probabilities_{}'.format(i)] = df['probabilities'].apply(lambda x: x[i])
+        df.drop('probabilities', axis=1, inplace=True)
+
     return df
 
 
